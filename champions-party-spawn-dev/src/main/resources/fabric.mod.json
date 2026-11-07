@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "champions_party_spawn",
+  "version": "${version}",
+  "name": "Champions Party & Spawn",
+  "description": "Safe Cobblemon team presets and server-authoritative spawn viewer.",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.champions.partyspawn.ChampionsMod"],
+    "client": ["dev.champions.partyspawn.ChampionsClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "cobblemon": ">=1.8.1"
+  }
+}
