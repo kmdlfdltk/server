@@ -1,40 +1,39 @@
-# Champions Party & Spawn — development source (not a playable mod)
+# Champions Party & Spawn (Fabric 1.21.1 / Cobblemon 1.8.1)
 
-Target: Minecraft 1.21.1 / Fabric / Cobblemon 1.8.1 / Java 21
+A development-alpha mod created for the user's Cobblemon Champions server.
 
-## Status, 2026-11-08
+**Functions implemented in source**
+- `/파티`, `/프리셋`, or P key: named party presets with an interactive GUI; up to 10 UUID-only saves.
+- Save/load/delete, Cobblemon party/PC ownership and battle checks, no Pokemon cloning, server-thread transfer with rollback attempt on failures.
+- K key: bucket-based local spawn viewer. A server-authoritative handler collects the actual `/checkspawn <bucket>` command's feedback without granting players OP permission. The K GUI supports common/uncommon/rare/ultra-rare.
+- Fabric S2C/C2S packet registration, server-side world+biome lookup, query cooldown, localization.
 
-This repository folder contains **original Java domain-logic source code only**. It is NOT a compiled or installable Fabric mod.
+**Important: independent original GUI, not the HyperNetwork proprietary GUI.** The original HyperPartyPreset client screen methods, server packet IDs, and copyrights have not been verified, so this alpha supplies its own functional GUI instead. No proprietary code or art are redistributed.
 
-- UUID-only per-player preset persistence: written
-- Preset ownership, battle-state, duplicate validation: written
-- Cobblemon 1.8.1 transactional Party–PC adapter: NOT implemented
-- HyperPartyPreset original UI and network protocol integration: NOT implemented
-- K-key Hyper spawn viewer and spawn-pool adapter: NOT implemented
-- Fabric entrypoints, build, in-game testing: NOT implemented
+## Build
 
-The model's local runtime returned repeated ClientError, so source JAR internals could not be re-verified. No third-party HyperNetwork code or images are redistributed here.
+- Java 21, Gradle 8.14.3, Minecraft 1.21.1, Fabric API, Cobblemon 1.8.1.
+- Run `gradle build` in this directory.
+- The GitHub Actions build workflow at `.github/workflows/champions-party-spawn-build.yml` also produces a downloadable JAR artifact after a successful run.
+- Use only the remapped output JAR in server **and** client `mods`.
 
-## Source files
+## Testing
 
-- src/main/java/dev/champions/partyspawn/PartyPresetRepository.java
-- src/main/java/dev/champions/partyspawn/PartyPresetService.java
-- src/main/java/dev/champions/partyspawn/SpawnQueryService.java
+1. Back up the world and Cobblemon storage files first.
+2. Test on a separate Fabric 1.21.1 / Cobblemon 1.8.1 server.
+3. Join as a non-operator and press K, compare with a privileged player's `/checkspawn common`.
+4. Save a six-Pokemon preset, change party using PC, then load. Confirm the **same** UUIDs, IVs, items and correct original PC slots.
+5. Test during a battle, while Pokemon are sent out, PC near full, invalid preset, disconnection/rejoin.
+6. Don't put this alpha on a public production server before both build and gameplay verification.
 
-These are Java 21 source components intended to be integrated later into a Fabric project. They are not command registrations, standalone Minecraft features, or graphical screens.
+## Source
 
-## Integration to-do
+- `PartyPresetRepository.java`: persistence
+- `PartyPresetService.java`: validation
+- `CobblemonStorageAdapter.java`: party ↔ PC transfer and rollback
+- `ChampionsPackets.java`: Fabric protocol
+- `ChampionsMod.java`: commands, request handlers and controlled Cobblemon checkspawn
+- `ChampionsClient.java`: keyboard controls and UI
+- `SpawnQueryService.java`: optional domain boundary for future direct-spawn-pool API integration
 
-1. Verify exact Cobblemon 1.8.1 storage API and implement a rollback-safe party/PC transfer adapter on the server main thread.
-2. Verify HyperPartyPreset screen opening method and packet IDs; obtain permission before reusing proprietary assets or code.
-3. Verify the Cobblemon spawn pool API in the supplied JAR and create a server-side adapter equivalent in scope to /checkspawn.
-4. Implement C2S/S2C Fabric networking and a client K-key handler.
-5. Add Fabric mod metadata, Gradle build, run in a separate test profile and validate against save backups.
-
-## Safety invariants
-
-- Never spawn or duplicate Pokémon while loading a preset. Only move UUID-matched, owned instances.
-- Prevent battle-time party swaps, duplicate UUIDs, missing Pokémon, and partial moves.
-- Always derive current position/biome/dimension from the actual server player for spawn queries.
-- Do not grant normal players operator permission just to support a screen.
-- No build or runtime validation is claimed.
+**Known limits:** Real spawn percentages are conditional *within* the selected rarity bucket, not an unconditional probability. Capturing diagnostic chat text is an interim method; directly using Cobblemon's spawn-pool API would be an improvement. HyperNetwork exact UI remains unimplemented. Build/in-game results must be checked separately.
