@@ -26,6 +26,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: champions-party-spawn-remapped-jar
-          path: champions-party-spawn-dev/build/libs/*.jar
+          name: champions-party-spawn-fabric-1.21.1-v0.3.0-alpha
+          path: champions-party-spawn-dev/build/libs/champions-party-spawn-0.3.0-alpha.jar
           if-no-files-found: error
