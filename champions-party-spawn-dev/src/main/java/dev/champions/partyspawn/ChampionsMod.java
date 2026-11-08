@@ -39,6 +39,14 @@ public final class ChampionsMod implements ModInitializer {
                 showPresets(p, "");
                 return 1;
             }));
+            dispatcher.register(Commands.literal("출현").executes(ctx -> {
+                showSpawns(ctx.getSource().getPlayerOrException(), "common");
+                return 1;
+            }));
+            dispatcher.register(Commands.literal("스폰목록").executes(ctx -> {
+                showSpawns(ctx.getSource().getPlayerOrException(), "common");
+                return 1;
+            }));
         });
 
         ServerPlayNetworking.registerGlobalReceiver(ChampionsPackets.Request.TYPE, (payload, context) -> {
@@ -64,16 +72,27 @@ public final class ChampionsMod implements ModInitializer {
     private static void showPresets(ServerPlayer player, String message) {
         try {
             JsonObject data = new JsonObject();
+            // Resolve every saved UUID against actual owned Pokemon; do not synthesize copies.
+            Map<UUID, Pokemon> owned = new HashMap<>();
+            for (Pokemon p : Cobblemon.INSTANCE.getStorage().getParty(player))
+                owned.put(p.getUuid(), p);
+            for (Pokemon p : Cobblemon.INSTANCE.getStorage().getPC(player))
+                owned.put(p.getUuid(), p);
+
             JsonArray presets = new JsonArray();
             for (var entry : repository(player).list(player.getUUID()).entrySet()) {
                 JsonObject slot = new JsonObject();
                 slot.addProperty("name", entry.getKey());
                 slot.addProperty("count", entry.getValue().size());
+                JsonArray members = new JsonArray();
+                for (UUID uuid : entry.getValue()) members.add(pokemonPreview(owned.get(uuid)));
+                slot.add("pokemon", members);
                 presets.add(slot);
             }
+
             JsonArray party = new JsonArray();
             for (Pokemon pokemon : Cobblemon.INSTANCE.getStorage().getParty(player)) {
-                party.add(pokemon.getSpecies().getName());
+                party.add(pokemonPreview(pokemon));
             }
             data.add("presets", presets);
             data.add("party", party);
@@ -83,6 +102,22 @@ public final class ChampionsMod implements ModInitializer {
             LOGGER.error("Preset listing failed", ex);
             error(player, "프리셋 목록을 가져올 수 없습니다: " + ex.getMessage());
         }
+    }
+
+    private static JsonObject pokemonPreview(Pokemon pokemon) {
+        JsonObject obj = new JsonObject();
+        if (pokemon == null) {
+            obj.addProperty("species", "missing");
+            obj.addProperty("missing", true);
+        } else {
+            obj.addProperty("species", pokemon.getSpecies().getName());
+            obj.addProperty("name", pokemon.getSpecies().getTranslatedName().getString());
+            obj.addProperty("level", pokemon.getLevel());
+            obj.addProperty("shiny", pokemon.getShiny());
+            obj.addProperty("form", pokemon.getForm().getName());
+            obj.addProperty("uuid", pokemon.getUuid().toString());
+        }
+        return obj;
     }
 
     private static void handle(ServerPlayer player, ChampionsPackets.Request payload) {
@@ -126,7 +161,7 @@ public final class ChampionsMod implements ModInitializer {
         }
         long now = System.currentTimeMillis();
         long last = LAST_SPAWN_QUERY.getOrDefault(player.getUUID(), 0L);
-        if (now - last < 1800) {
+        if (now - last < 500) {
             error(player, "잠시 후 다시 조회해주세요"); return;
         }
         LAST_SPAWN_QUERY.put(player.getUUID(), now);
@@ -155,7 +190,8 @@ public final class ChampionsMod implements ModInitializer {
         data.addProperty("biome", player.serverLevel().getBiome(player.blockPosition()).unwrapKey()
             .map(key -> key.location().toString()).orElse("unknown"));
         JsonArray results = new JsonArray();
-        if (lines.isEmpty()) lines.add("스폰 결과를 수집하지 못했습니다. 서버 로그를 확인해주세요.");
+        if (lines.isEmpty()) lines.add("출현 결과 없음 또는 명령어 응답 수집 실패. /checkspawn 명령어로 확인해 주세요.");
+        LOGGER.debug("Spawn query for {} bucket {} yielded {} lines", player.getGameProfile().getName(), bucket, lines.size());
         for (String line : lines) results.add(line);
         data.add("lines", results);
         send(player, "SPAWNS", data);
