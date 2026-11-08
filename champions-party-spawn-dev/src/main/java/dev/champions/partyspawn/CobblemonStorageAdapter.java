@@ -98,7 +98,9 @@ public final class CobblemonStorageAdapter implements PartyPresetService.Cobblem
         } catch (Exception failure) {
             // Restore original slots and exact PC positions; no copies of Pokemon are made.
             try {
-                for (Pokemon poke : List.copyOf(party)) party.remove(poke);
+                List<Pokemon> current = new ArrayList<>();
+                for (Pokemon poke : party) current.add(poke);
+                for (Pokemon poke : current) party.remove(poke);
                 for (Pokemon poke : displaced) pc.remove(poke);
                 for (var item : wantedFromPc.entrySet()) pc.remove(all.get(item.getKey()));
                 for (int i=0;i<originalParty.length;i++) if (originalParty[i]!=null) party.set(i,originalParty[i]);
