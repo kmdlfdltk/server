@@ -50,7 +50,7 @@ public final class BridgePrices {
                 if(sum>510)throw new IllegalArgumentException("노력치 합계 510 초과");
                 yield multiply(diff6(p,ints,false),c.evPerPoint);
             }
-            case 5 -> p.getNature().getName().getPath().equalsIgnoreCase(text)
+            case 5 -> p.getEffectiveNature().getName().getPath().equalsIgnoreCase(NatureKeys.require(text))
                 ?0:c.nature;
             case 6 -> {
                 if(!c.allowAbilityEditing)
