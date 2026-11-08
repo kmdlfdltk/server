@@ -136,6 +136,10 @@ public final class BridgeBuilder {
                 Nature nature=Natures.getNature(key);
                 if(nature==null)throw new IllegalArgumentException("Unknown nature");
                 pokemon.setNature(nature);
+                // Clear Mint modifiers so the displayed effective nature really changes.
+                pokemon.setMintedNature(null);
+                if (!pokemon.getEffectiveNature().getName().getPath().equals(key))
+                    throw new IllegalStateException("성격 변경이 적용되지 않았습니다");
             }
             case 6 -> {
                 // Includes hidden abilities only when the species/form actually permits them.
@@ -209,6 +213,8 @@ public final class BridgeBuilder {
             }
             success=true;
             reason="champions.bridge.applied";
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "[포켓빌더] 변경 성공 (항목 "+op+")"));
         }catch(Exception problem) {
             reason=problem.getMessage()==null?"champions.bridge.rejected":
                 problem.getMessage();
