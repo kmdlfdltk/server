@@ -182,7 +182,12 @@ public final class ChampionsMod implements ModInitializer {
         CommandSourceStack source = player.createCommandSourceStack()
             .withPermission(2).withSource(collector);
         // IMPORTANT: the argument is an allowlisted bucket, never arbitrary client command text.
-        player.getServer().getCommands().performPrefixedCommand(source, "checkspawn " + bucket);
+        // Cobblemon 1.8.1 sends /checkspawn results directly to ServerPlayer,
+        // not to CommandSourceStack. Capture those messages in a scoped Mixin.
+        try (SpawnCapture.Capture capture = SpawnCapture.begin(player.getUUID())) {
+            player.getServer().getCommands().performPrefixedCommand(source, "checkspawn " + bucket);
+            lines.addAll(capture.lines());
+        }
 
         JsonObject data = new JsonObject();
         data.addProperty("bucket", bucket);
