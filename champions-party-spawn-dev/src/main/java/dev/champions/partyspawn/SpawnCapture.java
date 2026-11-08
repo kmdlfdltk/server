@@ -27,9 +27,15 @@ public final class SpawnCapture {
         public boolean accept(UUID recipient, Component message) {
             if (closed || thread != Thread.currentThread() || !player.equals(recipient))
                 return false;
-            for (String row : message.getString().split("\\R")) {
-                if (lines.size() >= 100) break;
-                if (!row.isBlank()) lines.add(row.substring(0, Math.min(240, row.length())));
+            // Cobblemon 1.8.1 sends the entire comma-separated spawn pool
+            // as one Component. Split it into individual display rows instead
+            // of truncating the one huge chat message at 240 characters.
+            for (String paragraph : message.getString().split("\\R")) {
+                for (String piece : paragraph.split(",\\s*")) {
+                    if (lines.size() >= 125) break;
+                    String row = piece.trim();
+                    if (!row.isBlank()) lines.add(row.substring(0, Math.min(190, row.length())));
+                }
             }
             return true;
         }
