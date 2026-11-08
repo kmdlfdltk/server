@@ -16,6 +16,7 @@ public final class HyperBridgeMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        BridgeEconomyConfig.load();
         HyperWire.initialize();
 
         HyperWire.receive(HyperWire.PARTY+"$Request",(payload,player)->{
@@ -50,6 +51,16 @@ public final class HyperBridgeMod implements ModInitializer {
                 openBuilder(ctx.getSource().getPlayerOrException());
                 return 1;
             }));
+            dispatcher.register(Commands.literal("하이퍼경제").executes(ctx->{
+                ServerPlayer p=ctx.getSource().getPlayerOrException();
+                String status=CobbleDollarsWallet.status();
+                long value=CobbleDollarsWallet.balanceForView(p);
+                p.sendSystemMessage(Component.literal(
+                    "[Champions] "+status+" | 코블달러 잔액: "+
+                    (value<0?"조회 불가":Long.toString(value))+
+                    " | 설정: config/champions-hyper-ui-bridge.json"));
+                return 1;
+            }));
             dispatcher.register(Commands.literal("하이퍼브리지").executes(ctx->{
                 ServerPlayer p=ctx.getSource().getPlayerOrException();
                 p.sendSystemMessage(Component.literal(
@@ -66,7 +77,7 @@ public final class HyperBridgeMod implements ModInitializer {
                 try { HyperWire.sendParty(handler.player,"Status",PARTY_PROTOCOL,true); }
                 catch(Exception error){ LOG.warn("Party preset status handshake failed",error); }
             }));
-        LOG.info("Champions Hyper UI Bridge initialized (original UI, no copied assets).");
+        LOG.info("Champions UI Bridge initialized, CobbleDollars status: {}",CobbleDollarsWallet.status());
     }
 
     public static void openParty(ServerPlayer player) {
