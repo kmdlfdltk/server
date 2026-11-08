@@ -26,6 +26,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: champions-hyper-ui-bridge-v0.3.0-fabric-1.21.1
+          name: champions-hyper-ui-bridge-v0.4.0-fabric-1.21.1
           path: champions-hyper-ui-bridge/build/libs/champions-hyper-ui-bridge-0.3.0-alpha.jar
           if-no-files-found: error
