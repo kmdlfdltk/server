@@ -6,8 +6,12 @@
   "description": "Safe Cobblemon team presets and server-authoritative spawn viewer.",
   "environment": "*",
   "entrypoints": {
-    "main": ["dev.champions.partyspawn.ChampionsMod"],
-    "client": ["dev.champions.partyspawn.ChampionsClient"]
+    "main": [
+      "dev.champions.partyspawn.ChampionsMod"
+    ],
+    "client": [
+      "dev.champions.partyspawn.ChampionsClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.16.10",
@@ -15,5 +19,8 @@
     "java": ">=21",
     "fabric-api": "*",
     "cobblemon": ">=1.8.1"
-  }
+  },
+  "mixins": [
+    "champions_party_spawn.mixins.json"
+  ]
 }
