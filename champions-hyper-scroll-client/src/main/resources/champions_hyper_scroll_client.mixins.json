@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.champions.hyperscroll.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MouseWheelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
