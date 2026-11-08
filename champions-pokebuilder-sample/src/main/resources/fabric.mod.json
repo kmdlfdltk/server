@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "champions_pokebuilder",
+  "version": "${version}",
+  "name": "Champions PokeBuilder Sample",
+  "description": "Original standalone tablet-style Pokemon training editor for Cobblemon 1.8.1",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.champions.pokebuilder.PokeBuilderMod"],
+    "client": ["dev.champions.pokebuilder.PokeBuilderClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "cobblemon": ">=1.8.1"
+  }
+}
