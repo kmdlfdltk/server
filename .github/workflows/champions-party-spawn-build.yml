@@ -1,0 +1,31 @@
+name: Champions Party Spawn Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'champions-party-spawn-dev/**'
+      - '.github/workflows/champions-party-spawn-build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+      - name: Build Fabric mod
+        run: gradle -p champions-party-spawn-dev build --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: champions-party-spawn-remapped-jar
+          path: champions-party-spawn-dev/build/libs/*.jar
+          if-no-files-found: error
