@@ -3,6 +3,7 @@ package dev.champions.hyperbridge;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,6 +19,12 @@ public final class HyperBridgeMod implements ModInitializer {
     public void onInitialize() {
         BridgeEconomyConfig.load();
         HyperWire.initialize();
+        BuilderScrollPayload.register();
+        ServerPlayNetworking.registerGlobalReceiver(BuilderScrollPayload.TYPE,
+            (payload,context)->context.server().execute(()->
+                BridgeBuilder.scroll(context.player(),payload.direction())));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->
+            server.execute(()->BridgeBuilder.forget(handler.player)));
 
         HyperWire.receive(HyperWire.PARTY+"$Request",(payload,player)->{
             try { BridgePresets.handle(player,payload); }
