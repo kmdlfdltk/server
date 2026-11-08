@@ -1,4 +1,31 @@
-# Champions Hyper UI Bridge v0.2.0-alpha
+# Champions Hyper UI Bridge v0.4.0-alpha
+
+Minecraft 1.21.1 Fabric / Cobblemon 1.8.1.
+
+## What's changed in v0.4.0
+
+- **PokeBuilder editing tabs limited to IV, EV, Nature, Ability**. Level, gender, friendship, ball and size modules are removed from the server-provided UI module list.
+- The bridge also **rejects all edits** outside operations 3 (IV), 4 (EV), 5 (Nature), 6 (Ability), including requests from old or modified clients.
+- The actual Pokémon gender value (male/female/genderless) is retained for informational display; gender editing is disabled.
+- The original source UI clips a six-Pokémon party on some resolutions. Install the new *client-only* `champions-hyper-scroll-client-0.1.0-alpha.jar`: while hovering over the original PokeBuilder's left party panel, scroll down to request a View with slots 2–6 and up to return to 1–5.
+- **This is server-driven paging within the original UI, not a modification of HyperNetwork's proprietary screen class.** It preserves the design but is not yet proven in-game; switching pages may reset the selected Pokemon.
+- Original HyperPartyPreset, its saves, CobbleDollars fees for retained modules, Korean text and Pokémon model packets remain unchanged.
+
+## Installation
+
+Server: replace the previous `champions-hyper-ui-bridge-0.3.0-alpha.jar` with `champions-hyper-ui-bridge-0.4.0-alpha.jar`. Keep original HyperPartyPresetNet and HyperPokeBuilderNet and all other dependencies.
+
+Client: keep the original UI JARs from v0.2 unchanged, and **add** `champions-hyper-scroll-client-0.1.0-alpha.jar`. Do **not** put the scroll addon on the dedicated server. A client that lacks the addon can still open the original UI, but on a full party will see only the first five Pokémon in the builder.
+
+### Testing
+
+1. Back up the Cobblemon world and Pokémon storage.
+2. Check `/하이퍼파티` still works unchanged.
+3. Open `/하이퍼빌더`. Confirm the only editable modules are IV, EV, Nature, Ability.
+4. With exactly six Pokémon, place the mouse over the **left party column** and wheel down; the party data should switch to slots 2–6, including the sixth Pokémon. Wheel up returns to slots 1–5. The refresh must preserve real party slot IDs, so a change to the sixth should edit the sixth Pokémon.
+5. If the client screen does not refresh on a `View(open=false)` packet, or scroll input is intercepted by another mod, send both server/client `latest.log`; original client GUI binary-level patching would then be necessary.
+
+---
 
 Target: Minecraft 1.21.1 / Fabric / Cobblemon 1.8.1 / Java 21.
 
