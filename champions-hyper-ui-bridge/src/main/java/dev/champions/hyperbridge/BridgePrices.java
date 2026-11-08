@@ -59,7 +59,7 @@ public final class BridgePrices {
                 yield p.getAbility().getName().equalsIgnoreCase(selected.id())
                     ?0:(selected.hidden()?c.hiddenAbility:c.ability);
             }
-            case 8 -> {
+            case 9 -> {
                 int target=val(ints,0);
                 if(target<0||target>255)
                     throw new IllegalArgumentException("친밀도 범위 초과");
