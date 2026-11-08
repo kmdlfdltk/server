@@ -1,11 +1,9 @@
 package dev.champions.hyperbridge;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
 
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.pokemon.Natures;
@@ -13,18 +11,17 @@ import com.cobblemon.mod.common.api.pokemon.stats.Stats;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.pokemon.Nature;
 import com.cobblemon.mod.common.pokemon.Pokemon;
-
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Actual HyperPokeBuilderUI View/Apply/Result wire protocol adapter.
- * Non-OP users may preview, but cannot apply free edits.
- * Prices/balance are intentionally diagnostic placeholders; economy NOT connected.
+ * Original HyperPokeBuilderUI protocol v3 with real owned Cobblemon data.
+ * Prices and withdrawals are server authoritative; CobbleDollars is optional
+ * but fail-closed when not available.
  */
 public final class BridgeBuilder {
     private static final Stats[] STATS={
-        Stats.HP, Stats.ATTACK, Stats.DEFENCE,
-        Stats.SPECIAL_ATTACK, Stats.SPECIAL_DEFENCE, Stats.SPEED
+        Stats.HP,Stats.ATTACK,Stats.DEFENCE,
+        Stats.SPECIAL_ATTACK,Stats.SPECIAL_DEFENCE,Stats.SPEED
     };
     private static final Set<String> NATURES=Set.of(
         "hardy","lonely","brave","adamant","naughty","bold","docile","relaxed",
@@ -33,15 +30,15 @@ public final class BridgeBuilder {
         "sassy","careful","quirky"
     );
     private static final List<String> MODULES=List.of(
-        "level","ivs","evs","nature","ability","gender","friendship","ball","size"
+        "level","ivs","evs","nature","ability","friendship"
     );
     private BridgeBuilder(){}
 
-    private static Pokemon selected(ServerPlayer player,int slot) {
+    private static Pokemon selected(ServerPlayer p,int slot) {
         if(slot<0||slot>5)throw new IllegalArgumentException("Invalid party slot");
-        Pokemon p=Cobblemon.INSTANCE.getStorage().getParty(player).get(slot);
-        if(p==null)throw new IllegalArgumentException("Empty party slot");
-        return p;
+        Pokemon pokemon=Cobblemon.INSTANCE.getStorage().getParty(p).get(slot);
+        if(pokemon==null)throw new IllegalArgumentException("Empty party slot");
+        return pokemon;
     }
 
     private static int gender(Pokemon p) {
@@ -52,24 +49,31 @@ public final class BridgeBuilder {
     }
 
     private static Object asMon(Pokemon p,int slot) {
-        List<Integer> ivs=new ArrayList<>(6);
-        List<Integer> evs=new ArrayList<>(6);
-        for(Stats stat:STATS){
+        List<Integer> ivs=new ArrayList<>(6), evs=new ArrayList<>(6);
+        for(Stats stat:STATS) {
             ivs.add(p.getIvs().getOrDefault(stat));
             evs.add(p.getEvs().getOrDefault(stat));
         }
-        String ability=p.getAbility().getName();
-        List<Object> abilityList=List.of(
-            HyperWire.builder("AbilityOpt",ability,false)
-        );
+
+        List<Object> abilities=new ArrayList<>();
+        for(AbilityChoices.Choice available:AbilityChoices.forPokemon(p)) {
+            abilities.add(HyperWire.builder("AbilityOpt",
+                available.id(),available.hidden()));
+        }
+        String selectedAbility=p.getAbility().getName();
+        if(abilities.isEmpty()) {
+            // Exceptional event species can have a fixed, custom-only ability.
+            abilities.add(HyperWire.builder("AbilityOpt",selectedAbility,false));
+        }
         String nature=p.getNature().getName().getPath();
-        // The original UI reads all of these fields to render existing Pokémon.
         return HyperWire.builder("Mon",
-            slot,p.getUuid(),p.getSpecies().getName(),
-            p.getSpecies().getTranslatedName().getString(),
+            slot,
+            p.getUuid(),
+            p.getSpecies().getResourceIdentifier().toString(),
+            SpeciesNames.of(p),
             p.getLevel(),p.getShiny(),gender(p),false,
             p.getFriendship(),"poke_ball",
-            nature,nature,ability,abilityList,
+            nature,nature,selectedAbility,abilities,
             ivs,evs,"",2
         );
     }
@@ -80,24 +84,72 @@ public final class BridgeBuilder {
             Pokemon p=Cobblemon.INSTANCE.getStorage().getParty(player).get(i);
             if(p!=null)party.add(asMon(p,i));
         }
-        // User-requested UI sample. Only operators can edit; zero-cost display
-        // is NOT CobbleDollars support. Keep costs zero to avoid fake payments.
+        BridgeEconomyConfig c=BridgeEconomyConfig.INSTANCE;
         Object limits=HyperWire.builder("Limits",100,31,252,510,255);
         Object prices=HyperWire.builder("Prices",
-            0L,0L,0L,0L,0L,0L,0L,0L,0L,
-            List.of(0L,0L,0L,0L,0L),List.of());
+            c.levelPerPoint,c.levelReset,c.ivPerPoint,c.evPerPoint,c.nature,
+            c.ability,c.hiddenAbility,0L,c.friendshipPerPoint,
+            List.of(0L,0L,0L,0L,0L),List.of()
+        );
+        // If no real wallet provider exists, -1 signals unavailable balance.
+        long balance=CobbleDollarsWallet.balanceForView(player);
         return HyperWire.sendBuilder(player,"View",
-            3,open,0L,MODULES,limits,prices,party);
-    }
-
-    private static int at(List<Integer> args,int i) {
-        if(i>=args.size())throw new IllegalArgumentException("Missing integer field");
-        return args.get(i);
+            3,open,balance,MODULES,limits,prices,party);
     }
 
     private static void requireRange(int value,int min,int max) {
         if(value<min||value>max)
-            throw new IllegalArgumentException("Requested value out of range "+min+"..."+max);
+            throw new IllegalArgumentException("Requested value outside "+min+"..."+max);
+    }
+
+    private static int at(List<Integer> args,int idx) {
+        if(args==null||idx>=args.size())
+            throw new IllegalArgumentException("Missing numeric argument");
+        return args.get(idx);
+    }
+
+    private static void mutate(Pokemon pokemon,int op,List<Integer> ints,
+                               String text) {
+        switch(op) {
+            case 1 -> {
+                int increase=at(ints,0);
+                requireRange(increase,1,100-pokemon.getLevel());
+                pokemon.setLevel(pokemon.getLevel()+increase);
+            }
+            case 2 -> pokemon.setLevel(1);
+            case 3 -> {
+                if(ints==null||ints.size()!=6)
+                    throw new IllegalArgumentException("Expected six IVs");
+                for(int value:ints)requireRange(value,0,31);
+                for(int i=0;i<6;i++)pokemon.setIV(STATS[i],ints.get(i));
+            }
+            case 4 -> {
+                if(ints==null||ints.size()!=6)
+                    throw new IllegalArgumentException("Expected six EVs");
+                int sum=0;
+                for(int value:ints) { requireRange(value,0,252); sum+=value; }
+                if(sum>510)throw new IllegalArgumentException("EV sum exceeds 510");
+                for(int i=0;i<6;i++)pokemon.setEV(STATS[i],ints.get(i));
+            }
+            case 5 -> {
+                String key=text.trim().toLowerCase(Locale.ROOT);
+                if(!NATURES.contains(key))throw new IllegalArgumentException("Unknown nature");
+                Nature nature=Natures.getNature(key);
+                if(nature==null)throw new IllegalArgumentException("Unknown nature");
+                pokemon.setNature(nature);
+            }
+            case 6 -> {
+                // Includes hidden abilities only when the species/form actually permits them.
+                var target=AbilityChoices.require(pokemon,text);
+                AbilityChoices.set(pokemon,target);
+            }
+            case 9 -> {
+                int value=at(ints,0);
+                requireRange(value,0,255);
+                pokemon.setFriendship(value,false);
+            }
+            default -> throw new UnsupportedOperationException("This module is not enabled");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -108,65 +160,54 @@ public final class BridgeBuilder {
         Object uuidField=HyperWire.field(packet,"getUuid");
         int op=HyperWire.integer(packet,"getOp");
         List<Integer> ints=(List<Integer>)HyperWire.field(packet,"getInts");
-        String text=HyperWire.string(packet,"getText");
+        String input=HyperWire.string(packet,"getText");
+        long uiQuoted=HyperWire.number(packet,"getQuoted");
         boolean success=false;
-        String reason="champions.hyperbridge.rejected";
+        String reason="champions.bridge.rejected";
 
         try {
             if(protocol!=3)throw new IllegalArgumentException("Protocol mismatch");
-            if(!player.hasPermissions(2))
-                throw new IllegalStateException("OP 권한이 필요합니다 (현재는 무료 편집 테스트용)");
             if(BattleRegistry.getBattleByParticipatingPlayer(player)!=null)
-                throw new IllegalStateException("배틀 중에는 수정할 수 없습니다");
+                throw new IllegalStateException("배틀 중 수정할 수 없습니다");
             Pokemon pokemon=selected(player,slot);
             if(!pokemon.getUuid().equals(uuidField))
-                throw new IllegalStateException("선택한 포켓몬이 변경되었습니다. 다시 열어주세요");
+                throw new IllegalStateException("파티가 변경되었습니다. 다시 열어 주세요");
             if(pokemon.getEntity()!=null)
-                throw new IllegalStateException("밖에 꺼낸 포켓몬을 먼저 회수해 주세요");
-            switch(op){
-                case 1 -> {
-                    int value=at(ints,0);
-                    requireRange(value,1,100);
-                    // LEVEL_ADD generally sends a positive increment; don't allow
-                    // arbitrarily large or negative additions from edited packets.
-                    pokemon.setLevel(Math.min(100,pokemon.getLevel()+value));
-                }
-                case 2 -> pokemon.setLevel(1);
-                case 3 -> {
-                    if(ints.size()!=6)throw new IllegalArgumentException("Expected six IVs");
-                    for(int value:ints)requireRange(value,0,31);
-                    for(int i=0;i<6;i++)pokemon.setIV(STATS[i],ints.get(i));
-                }
-                case 4 -> {
-                    if(ints.size()!=6)throw new IllegalArgumentException("Expected six EVs");
-                    int sum=0;
-                    for(int value:ints) {requireRange(value,0,252);sum+=value;}
-                    if(sum>510)throw new IllegalArgumentException("EV total exceeds 510");
-                    for(int i=0;i<6;i++)pokemon.setEV(STATS[i],ints.get(i));
-                }
-                case 5 -> {
-                    String key=text.trim().toLowerCase(Locale.ROOT);
-                    if(!NATURES.contains(key))
-                        throw new IllegalArgumentException("Unknown nature");
-                    Nature nature=Natures.getNature(key);
-                    if(nature==null)throw new IllegalArgumentException("Unknown nature");
-                    pokemon.setNature(nature);
-                }
-                case 9 -> {
-                    int value=at(ints,0);
-                    requireRange(value,0,255);
-                    pokemon.setFriendship(value,false);
-                }
-                default -> throw new UnsupportedOperationException(
-                    "해당 항목은 화면 테스트만 지원합니다 (특성/볼/성별/크기)");
+                throw new IllegalStateException("꺼낸 포켓몬을 먼저 회수해 주세요");
+
+            // Prevalidate the complete operation before charging.
+            long charge=BridgePrices.quote(pokemon,op,ints,input);
+            var config=BridgeEconomyConfig.INSTANCE;
+            boolean bypass=config.operatorBypassPayment && player.hasPermissions(2);
+            if(!bypass && !CobbleDollarsWallet.available()) {
+                if(!config.allowFreeEditsIfProviderMissing)
+                    throw new IllegalStateException(
+                        "CobbleDollars 연결 없음: "+CobbleDollarsWallet.status());
+                charge=0;
+            }
+
+            if(!bypass && charge>0 && uiQuoted!=charge) {
+                throw new IllegalStateException(
+                    "가격 정보가 갱신되었습니다. 화면을 다시 열어 주세요 (표시 "
+                    +uiQuoted+" / 서버 "+charge+")");
+            }
+
+            final int finalOp=op;
+            final Pokemon finalPokemon=pokemon;
+            Runnable mutation=()->mutate(finalPokemon,finalOp,ints,input);
+            if(bypass || charge==0){
+                mutation.run();
+            } else {
+                CobbleDollarsWallet.payAndApply(player,charge,mutation);
             }
             success=true;
-            reason="champions.hyperbridge.applied";
-        } catch (Exception failure) {
-            reason=failure.getMessage()==null?"champions.hyperbridge.rejected":
-                failure.getMessage();
+            reason="champions.bridge.applied";
+        }catch(Exception problem) {
+            reason=problem.getMessage()==null?"champions.bridge.rejected":
+                problem.getMessage();
             HyperBridgeMod.LOG.warn("PokeBuilder operation {} rejected: {}",op,reason);
         }
+
         HyperWire.sendBuilder(player,"Result",3,seq,success,reason,List.of());
         sendView(player,false);
     }
@@ -175,9 +216,9 @@ public final class BridgeBuilder {
         try {
             int seq=HyperWire.integer(packet,"getSeq");
             HyperWire.sendBuilder(player,"Result",3,seq,false,
-                reason==null?"champions.hyperbridge.rejected":reason,List.of());
+                reason==null?"champions.bridge.rejected":reason,List.of());
         }catch(Exception e){
-            HyperBridgeMod.LOG.error("Unable to send builder failure response",e);
+            HyperBridgeMod.LOG.error("Unable to send builder failure",e);
         }
     }
 }
