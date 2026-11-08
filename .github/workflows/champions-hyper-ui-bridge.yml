@@ -27,5 +27,5 @@ jobs:
         if: success()
         with:
           name: champions-hyper-ui-bridge-v0.3.0-fabric-1.21.1
-          path: champions-hyper-ui-bridge/build/libs/champions-hyper-ui-bridge-0.2.0-alpha.jar
+          path: champions-hyper-ui-bridge/build/libs/champions-hyper-ui-bridge-0.3.0-alpha.jar
           if-no-files-found: error
