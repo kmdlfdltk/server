@@ -1,0 +1,31 @@
+name: Champions Hyper UI Bridge Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'champions-hyper-ui-bridge/**'
+      - '.github/workflows/champions-hyper-ui-bridge.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+      - name: Build bridge (without redistributing original HyperNetwork binary)
+        run: gradle -p champions-hyper-ui-bridge build --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: champions-hyper-ui-bridge-fabric-1.21.1-alpha
+          path: champions-hyper-ui-bridge/build/libs/champions-hyper-ui-bridge-0.1.0-alpha.jar
+          if-no-files-found: error
