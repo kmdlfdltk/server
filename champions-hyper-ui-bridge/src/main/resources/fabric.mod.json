@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "champions_hyper_ui_bridge",
+  "version": "${version}",
+  "name": "Champions Hyper UI Bridge",
+  "description": "Server-side adapter for original HyperPartyPreset and HyperPokeBuilder UI packet protocols. No proprietary classes included.",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.champions.hyperbridge.HyperBridgeMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "fabric-language-kotlin": "*",
+    "cobblemon": ">=1.8.1",
+    "hyperpartypreset-net": "0.1.29",
+    "hyperpokebuilderui-net": "1.0.42"
+  }
+}
