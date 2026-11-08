@@ -1,0 +1,33 @@
+name: Inspect Cobblemon spawn command (developer diagnostic)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/inspect-cobblemon-api.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+      - name: Resolve compiled mod dependencies
+        run: gradle -p champions-party-spawn-dev dependencies --configuration modCompileClasspath --no-daemon
+      - name: Inspect loaded Cobblemon command entrypoints
+        run: |
+          set +e
+          find . ~/.gradle -type f -name '*.jar' | grep -Ei 'gBW3vLC7|cobblemon' | head -35
+          f=$(find . ~/.gradle -type f -name '*.jar' | grep -Ei 'gBW3vLC7|cobblemon' | head -1)
+          if [ -z "$f" ]; then exit 0; fi
+          echo "JAR: $f"
+          jar tf "$f" | grep -Ei 'CheckSpawn|SpawnPool|SpawnContext|Spawner.*Kt' | head -90
+          cls=$(jar tf "$f" | grep -i 'CheckSpawn.*\.class$' | head -1 | sed -e 's/\.class$//' -e 's#/#.#g')
+          echo "CHECK_SPAWN_CLASS=$cls"
+          if [ -n "$cls" ]; then javap -c -p -classpath "$f" "$cls" | head -700; fi
