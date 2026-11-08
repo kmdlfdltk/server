@@ -72,7 +72,7 @@ public final class BridgeBuilder {
             p.getSpecies().getResourceIdentifier().toString(),
             SpeciesNames.of(p),
             p.getLevel(),p.getShiny(),gender(p),false,
-            p.getFriendship(),"poke_ball",
+            p.getFriendship(),BallChoices.idOf(p.getCaughtBall()),
             nature,nature,selectedAbility,abilities,
             ivs,evs,"",2
         );
@@ -141,6 +141,12 @@ public final class BridgeBuilder {
                 // Includes hidden abilities only when the species/form actually permits them.
                 var target=AbilityChoices.require(pokemon,text);
                 AbilityChoices.set(pokemon,target);
+            }
+            case 8 -> {
+                var nextBall=BallChoices.require(text);
+                pokemon.setCaughtBall(nextBall);
+                if(!pokemon.getCaughtBall().equals(nextBall))
+                    throw new IllegalStateException("볼 변경이 적용되지 않았습니다");
             }
             case 9 -> {
                 int value=at(ints,0);
