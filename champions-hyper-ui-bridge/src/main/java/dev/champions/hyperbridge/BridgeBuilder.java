@@ -30,7 +30,7 @@ public final class BridgeBuilder {
         "sassy","careful","quirky"
     );
     private static final List<String> MODULES=List.of(
-        "level","ivs","evs","nature","ability","friendship"
+        "level","ivs","evs","nature","ability","gender","friendship","ball","size"
     );
     private BridgeBuilder(){}
 
@@ -132,8 +132,7 @@ public final class BridgeBuilder {
                 for(int i=0;i<6;i++)pokemon.setEV(STATS[i],ints.get(i));
             }
             case 5 -> {
-                String key=text.trim().toLowerCase(Locale.ROOT);
-                if(!NATURES.contains(key))throw new IllegalArgumentException("Unknown nature");
+                String key=NatureKeys.require(text);
                 Nature nature=Natures.getNature(key);
                 if(nature==null)throw new IllegalArgumentException("Unknown nature");
                 pokemon.setNature(nature);
@@ -161,6 +160,8 @@ public final class BridgeBuilder {
         int op=HyperWire.integer(packet,"getOp");
         List<Integer> ints=(List<Integer>)HyperWire.field(packet,"getInts");
         String input=HyperWire.string(packet,"getText");
+        HyperBridgeMod.LOG.debug("PokeBuilder Apply: player={}, slot={}, op={}, text={}, ints={}",
+            player.getUUID(),slot,op,input,ints);
         long uiQuoted=HyperWire.number(packet,"getQuoted");
         boolean success=false;
         String reason="champions.bridge.rejected";
@@ -206,6 +207,8 @@ public final class BridgeBuilder {
             reason=problem.getMessage()==null?"champions.bridge.rejected":
                 problem.getMessage();
             HyperBridgeMod.LOG.warn("PokeBuilder operation {} rejected: {}",op,reason);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "[포켓빌더] 변경 실패 ("+op+"): "+reason));
         }
 
         HyperWire.sendBuilder(player,"Result",3,seq,success,reason,List.of());
