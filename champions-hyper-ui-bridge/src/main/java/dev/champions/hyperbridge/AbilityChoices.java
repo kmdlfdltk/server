@@ -16,7 +16,11 @@ public final class AbilityChoices {
     private static void addChoices(
             AbilityPool pool, Pokemon p, List<Choice> choices) {
         for(PotentialAbility item:pool) {
-            if(!item.isSatisfiedBy(p.getAspects()))continue;
+            // Hidden abilities are selectable even if the current Pokemon has no
+            // hidden-ability aspect/coordinate yet. They still must be
+            // explicitly present in this species/form ability pool.
+            if(!item.isSatisfiedBy(p.getAspects()) && !(item instanceof HiddenAbility))
+                continue;
             String id=item.getTemplate().getName().toLowerCase(Locale.ROOT);
             boolean hidden=item instanceof HiddenAbility;
             boolean found=false;
@@ -36,12 +40,21 @@ public final class AbilityChoices {
     public static List<Choice> forPokemon(Pokemon p) {
         List<Choice> choices=new ArrayList<>();
         addChoices(p.getForm().getAbilities(),p,choices);
-        if(choices.isEmpty())addChoices(p.getSpecies().getAbilities(),p,choices);
+        // Base forms can inherit options from the species ability pool.
+        // This also recovers hidden abilities omitted by a sparse form override.
+        if(choices.isEmpty() ||
+           p.getForm().getName().equalsIgnoreCase("standard") ||
+           p.getForm().getName().equalsIgnoreCase("normal")) {
+            addChoices(p.getSpecies().getAbilities(),p,choices);
+        }
         return List.copyOf(choices);
     }
 
     public static Choice require(Pokemon p,String id) {
         String normalized=id==null?"":id.trim().toLowerCase(Locale.ROOT);
+        if(normalized.startsWith("h:"))normalized=normalized.substring(2);
+        if(normalized.startsWith("hidden:"))normalized=normalized.substring(7);
+        if(normalized.startsWith("cobblemon:"))normalized=normalized.substring(10);
         return forPokemon(p).stream()
             .filter(x->x.id().equals(normalized))
             .findFirst()
