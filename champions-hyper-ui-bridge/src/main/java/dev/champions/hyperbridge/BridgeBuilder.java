@@ -30,7 +30,7 @@ public final class BridgeBuilder {
         "sassy","careful","quirky"
     );
     private static final List<String> MODULES=List.of(
-        "level","ivs","evs","nature","ability","gender","friendship","ball","size"
+        "ivs","evs","nature","ability"
     );
     private BridgeBuilder(){}
 
@@ -178,6 +178,11 @@ public final class BridgeBuilder {
 
         try {
             if(protocol!=3)throw new IllegalArgumentException("Protocol mismatch");
+            // Disabled tabs are blocked server-side too, even if an outdated
+            // client sends a forged/old level, gender, friendship, ball, or size edit.
+            if (op != 3 && op != 4 && op != 5 && op != 6)
+                throw new UnsupportedOperationException(
+                    "이 서버에서는 개체값·노력치·성격·특성만 변경할 수 있습니다.");
             if(BattleRegistry.getBattleByParticipatingPlayer(player)!=null)
                 throw new IllegalStateException("배틀 중 수정할 수 없습니다");
             Pokemon pokemon=selected(player,slot);
