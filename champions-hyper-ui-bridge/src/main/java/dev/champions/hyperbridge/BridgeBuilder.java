@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.pokemon.Natures;
@@ -32,7 +35,30 @@ public final class BridgeBuilder {
     private static final List<String> MODULES=List.of(
         "ivs","evs","nature","ability"
     );
+    // The source Hyper GUI fits five party rows. Mouse-wheel input switches
+    // between first five and last five; slot IDs remain actual server slots.
+    private static final Map<UUID, Integer> PARTY_SCROLL = new ConcurrentHashMap<>();
+    private static final int VISIBLE_PARTY_ROWS = 5;
     private BridgeBuilder(){}
+
+    public static void forget(ServerPlayer p) {
+        PARTY_SCROLL.remove(p.getUUID());
+    }
+
+    public static void scroll(ServerPlayer p, int direction) {
+        if (direction < -1 || direction > 1 || direction == 0) return;
+        if (PARTY_SCROLL.get(p.getUUID()) == null) return;
+        int count=0;
+        for(int i=0; i<6; i++)
+            if (Cobblemon.INSTANCE.getStorage().getParty(p).get(i)!=null) count++;
+        if (count <= VISIBLE_PARTY_ROWS) return;
+        int previous=PARTY_SCROLL.getOrDefault(p.getUUID(),0);
+        int next=Math.max(0,Math.min(count-VISIBLE_PARTY_ROWS,previous+direction));
+        if(previous!=next) {
+            PARTY_SCROLL.put(p.getUUID(),next);
+            sendView(p,false);
+        }
+    }
 
     private static Pokemon selected(ServerPlayer p,int slot) {
         if(slot<0||slot>5)throw new IllegalArgumentException("Invalid party slot");
@@ -79,11 +105,18 @@ public final class BridgeBuilder {
     }
 
     public static boolean sendView(ServerPlayer player,boolean open) {
-        List<Object> party=new ArrayList<>(6);
+        if(open) PARTY_SCROLL.put(player.getUUID(),0);
+        List<Object> allParty=new ArrayList<>(6);
         for(int i=0;i<6;i++) {
             Pokemon p=Cobblemon.INSTANCE.getStorage().getParty(player).get(i);
-            if(p!=null)party.add(asMon(p,i));
+            if(p!=null)allParty.add(asMon(p,i));
         }
+        int maxOffset=Math.max(0,allParty.size()-VISIBLE_PARTY_ROWS);
+        int offset=Math.min(maxOffset,PARTY_SCROLL.getOrDefault(player.getUUID(),0));
+        PARTY_SCROLL.put(player.getUUID(),offset);
+        List<Object> party=allParty.size()>VISIBLE_PARTY_ROWS
+            ?new ArrayList<>(allParty.subList(offset,offset+VISIBLE_PARTY_ROWS))
+            :allParty;
         BridgeEconomyConfig c=BridgeEconomyConfig.INSTANCE;
         Object limits=HyperWire.builder("Limits",100,31,252,510,255);
         Object prices=HyperWire.builder("Prices",
