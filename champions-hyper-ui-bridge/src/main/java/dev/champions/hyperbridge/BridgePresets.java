@@ -158,11 +158,10 @@ public final class BridgePresets {
                     members.add(HyperWire.party("Member","missing",List.of(),
                         0,"",false));
                 } else {
-                    List<String> aspects=new ArrayList<>(pokemon.getForm().getAspects());
-                    if(pokemon.getShiny())aspects.add("shiny");
+                    List<String> aspects=new ArrayList<>(pokemon.getAspects());
                     members.add(HyperWire.party("Member",
-                        pokemon.getSpecies().getName(),aspects,
-                        pokemon.getLevel(),pokemon.getSpecies().getTranslatedName().getString(),true));
+                        pokemon.getSpecies().getResourceIdentifier().toString(),aspects,
+                        pokemon.getLevel(),pokemon.getNickname()==null?"":pokemon.getNickname().getString(),true));
                 }
             }
             out.add(HyperWire.party("Preset",
