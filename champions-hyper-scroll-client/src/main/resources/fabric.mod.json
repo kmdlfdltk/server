@@ -1,0 +1,18 @@
+{
+    "schemaVersion": 1,
+    "id": "champions_hyper_scroll_client",
+    "version": "${version}",
+    "name": "Champions PokeBuilder Party Scroll",
+    "description": "Adds mouse-wheel access to the sixth party member in the original Hyper PokeBuilder screen via the Champions server bridge.",
+    "environment": "client",
+    "entrypoints": {
+        "client": ["dev.champions.hyperscroll.ScrollClient"]
+    },
+    "mixins": ["champions_hyper_scroll_client.mixins.json"],
+    "depends": {
+        "fabricloader": ">=0.16.14",
+        "minecraft": "1.21.1",
+        "java": ">=21",
+        "fabric-api": "*"
+    }
+}
