@@ -59,6 +59,10 @@ public final class BridgePrices {
                 yield p.getAbility().getName().equalsIgnoreCase(selected.id())
                     ?0:(selected.hidden()?c.hiddenAbility:c.ability);
             }
+            case 8 -> {
+                var ball=BallChoices.require(text);
+                yield p.getCaughtBall().equals(ball)?0:c.ballChange;
+            }
             case 9 -> {
                 int target=val(ints,0);
                 if(target<0||target>255)
