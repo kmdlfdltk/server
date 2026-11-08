@@ -240,6 +240,8 @@ public final class ChampionsClient implements ClientModInitializer {
         private String error="";
         private List<String> lines = new ArrayList<>();
         private int page;
+        private boolean waiting;
+        private int waitingTicks;
         private static final int PAGE_SIZE=10;
         private int x, y;
 
@@ -259,6 +261,8 @@ public final class ChampionsClient implements ClientModInitializer {
             lines.add("서버에서 현재 위치 스폰 목록을 조회하는 중...");
             error="";
             page=0;
+            waiting=true;
+            waitingTicks=0;
         }
         void accept(JsonObject response) {
             this.data=response;
@@ -268,10 +272,17 @@ public final class ChampionsClient implements ClientModInitializer {
             if(lines.isEmpty()) lines.add("조회 결과가 없습니다.");
             page=0;
             error="";
+            waiting=false;
         }
         void fail(String message) {
             this.error=message;
+            this.waiting=false;
             this.lines=new ArrayList<>(List.of("요청 오류: "+message));
+        }
+
+        @Override public void tick() {
+            if (waiting && ++waitingTicks > 140)
+                fail("서버 응답 시간 초과. /출현 명령어와 서버 로그를 확인해주세요.");
         }
 
         @Override protected void init() {
