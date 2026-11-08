@@ -23,12 +23,13 @@ jobs:
       - name: Inspect actual Cobblemon and Pokemon APIs
         shell: bash
         run: |
+          set +o pipefail
           f=$(find champions-hyper-ui-bridge/.gradle/loom-cache champions-hyper-ui-bridge/build/loom-cache -name '*gBW3vLC7*.jar' | head -1)
           echo "JAR=$f"
           if [ -z "$f" ]; then exit 1; fi
           for cls in             com.cobblemon.mod.common.pokemon.Pokemon             com.cobblemon.mod.common.api.pokemon.Natures             com.cobblemon.mod.common.api.pokemon.PokemonProperties             com.cobblemon.mod.common.api.pokeball.PokeBalls             com.cobblemon.mod.common.api.pokeball.PokeBall             com.cobblemon.mod.common.api.abilities.AbilityPool             com.cobblemon.mod.common.api.abilities.PotentialAbility             com.cobblemon.mod.common.pokemon.FormData             com.cobblemon.mod.common.api.pokemon.stats.Stats; do
              echo "===== $cls ====="
-             javap -p -classpath "$f" "$cls" 2>&1 | grep -Ei 'getCaught|setCaught|getBall|setBall|PokeBall|Nature|Ability|Pool|Gender|Friendship|Shiny|Species|Form|Register|List|Registry|all|hidden|apricorn|HP|java.util.Set' | head -120
+             javap -p -classpath "$f" "$cls" 2>&1 | grep -Ei 'getCaught|setCaught|getBall|setBall|PokeBall|Nature|Ability|Pool|Gender|Friendship|Shiny|Species|Form|Register|List|Registry|all|hidden|apricorn|HP|java.util.Set' | sed -n '1,150p'
           done
           echo "===== POKEBALL CLASS NAMES ====="
-          jar tf "$f" | grep -iE 'PokeBall(s|Registry|Type|\.class)|ball.*Registry' | head -80
+          jar tf "$f" | grep -iE 'PokeBall(s|Registry|Type|\.class)|ball.*Registry' | sed -n '1,90p'
