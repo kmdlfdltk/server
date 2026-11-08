@@ -55,11 +55,12 @@ public final class AbilityChoices {
         if(normalized.startsWith("h:"))normalized=normalized.substring(2);
         if(normalized.startsWith("hidden:"))normalized=normalized.substring(7);
         if(normalized.startsWith("cobblemon:"))normalized=normalized.substring(10);
+        final String wanted=normalized;
         return forPokemon(p).stream()
-            .filter(x->x.id().equals(normalized))
+            .filter(x->x.id().equals(wanted))
             .findFirst()
             .orElseThrow(()->new IllegalArgumentException(
-                "해당 포켓몬이 가질 수 없는 특성: "+normalized));
+                "해당 포켓몬이 가질 수 없는 특성: "+wanted));
     }
 
     public static void set(Pokemon p, Choice choice) {
