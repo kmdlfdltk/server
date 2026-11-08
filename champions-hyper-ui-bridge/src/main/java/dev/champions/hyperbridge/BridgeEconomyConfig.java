@@ -25,6 +25,8 @@ public final class BridgeEconomyConfig {
     public long nature = 1500;
     public long ability = 2000;
     public long hiddenAbility = 5000;
+    // Original UI's per-ball quote must be verified before charging for ball edits.
+    public long ballChange = 0;
     public long friendshipPerPoint = 10;
     public boolean allowAbilityEditing = true;
 
@@ -52,6 +54,7 @@ public final class BridgeEconomyConfig {
         c.nature=positive(c.nature);
         c.ability=positive(c.ability);
         c.hiddenAbility=positive(c.hiddenAbility);
+        c.ballChange=positive(c.ballChange);
         c.friendshipPerPoint=positive(c.friendshipPerPoint);
     }
 
